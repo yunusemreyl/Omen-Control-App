@@ -1,34 +1,45 @@
-# Omen Control App v2.1 ⚡
+# HP Omen Control (Linux) 🐧
 
 ![Linux](https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black)
-![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![GTK4](https://img.shields.io/badge/GTK4-Libadwaita-green?style=for-the-badge)
+![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
 
-**Omen Control App** is a professional, open-source configuration center for HP Victus and Omen laptops on Linux. It provides a modern interface to manage RGB lighting, power profiles, and system health. It is designed as a powerful, native replacement for the Omen Gaming Hub on Linux systems.
+A Linux-compatible control and configuration tool for **HP Victus / Omen** laptops. This application brings power management, RGB keyboard control, and system monitoring together in a single, clean GTK4 interface. It serves as a lightweight, functional alternative to the Windows-only Omen Gaming Hub.
 
 ---
 
-## 📸 Screenshots
+## 🖼️ Screenshots
 
-| Application Interface | Installation Wizard |
-| :---: | :---: |
-| ![App Screenshot](https://github.com/yunusemreyl/Omen-Control-App/raw/main/images/app_screenshot.png) | ![Setup Screenshot](https://github.com/yunusemreyl/Omen-Control-App/raw/main/images/setup_screenshot.png) |
+| Installation Wizard | Installation Options | Main Control Panel (v2.1) |
+| :---: | :---: | :---: |
+| ![Setup 1](images/setup1.png) | ![Setup 2](images/setup2.png) | ![App Screenshot](images/app_screenshot.png) |
 
 ---
 
 ## ✨ Features
 
-* **4-Zone RGB Control:** Full control over keyboard zones with Static, Breath, Cycle, and Wave (Left/Right) animations.
-* **Live Preview:** Real-time visual feedback of RGB effects and color changes directly within the GUI preview.
-* **Power Management:** Seamlessly toggle between Eco, Balanced, and Performance modes (supports `power-profiles-daemon` and `tuned`).
-* **System Monitor:** High-precision tracking of CPU Temperature, RAM utilization, and Disk usage.
-* **Persistent Service:** Settings are preserved after reboots and applied automatically via a dedicated `systemd` background service.
-* **Smart Installer:** Automatic kernel driver compilation and dependency management for Fedora, Ubuntu, Debian, and Arch Linux.
+### 🔋 Power Profiles
+* **ECO / Balanced / Performance** modes integrated with system power daemons.
+
+### 🌡️ Live System Monitoring
+* **CPU Temperature** tracking.
+* **RAM and Disk** usage percentages.
+
+### ⌨️ RGB Keyboard Control
+* **Zone-based control** (Zone 1–4) or full keyboard synchronization.
+* **Static color** selection and dynamic **Wave effects** (Right-to-Left).
+* Fine-grained **Brightness and Speed** adjustments.
+
+### 🧩 Setup Wizard (`setup.py`)
+* Optional **NVIDIA driver** installation.
+* **Gaming libraries** (Gamemode, Wine dependencies).
+* **Steam and Heroic Games Launcher** support.
 
 ---
 
-## 🚀 Installation
+## 🚀 Quick Start & Installation
 
-1. Clone the repository:
+Tested on **Fedora 41**, **Ubuntu 24.04**, and **Arch Linux**. Copy and paste the command below to install:
+
 ```bash
-git clone [https://github.com/yunusemreyl/Omen-Control-App.git](https://github.com/yunusemreyl/Omen-Control-App.git)
+git clone [https://github.com/yunusemreyl/Omen-Control-App.git](https://github.com/yunusemreyl/Omen-Control-App.git) && cd Omen-Control-App && sudo python3 setup.py
