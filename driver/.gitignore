@@ -1,0 +1,10 @@
+driver/*.ko
+driver/*.o
+driver/*.mod*
+driver/*.cmd
+driver/modules.order
+driver/Module.symvers
+driver/.tmp_versions/
+__pycache__/
+*.pyc
+.DS_Store
