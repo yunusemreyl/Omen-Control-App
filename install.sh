@@ -1,95 +1,164 @@
 #!/bin/bash
 
-# --- COLORS ---
-GREEN='\033[0;32m'
-RED='\033[0;31m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+# ==============================================================================
+#  HP OMEN CONTROL CENTER - INSTALLER
+#  Version: 3.2 (Universal & Clean)
+#  Author: yunusemreyl
+# ==============================================================================
 
-# --- BANNER ---
-echo -e "${YELLOW}"
-echo "#################################################"
-echo "#      HP OMEN CONTROL CENTER - INSTALLER       #"
-echo "#           v3.0 Universal | yunusemreyl        #"
-echo "#################################################"
-echo -e "${NC}"
-
-# --- ROOT CHECK ---
-if [ "$EUID" -ne 0 ]; then
-  echo -e "${RED}[!] Please run as root: sudo ./install.sh${NC}"
-  exit 1
-fi
-
-# --- VARIABLES ---
+# --- SABİTLER VE AYARLAR ---
+APP_NAME="hp-omen-control"
 APP_DIR="/usr/share/hp-omen-control"
 BIN_LINK="/usr/local/bin/omen-control"
 DESKTOP_FILE="/usr/share/applications/com.yyl.hpcontrolcenter.desktop"
-SERVICE_FILE="/etc/systemd/system/com.yyl.hpcontrolcenter.service"
+SERVICE_NAME="com.yyl.hpcontrolcenter.service"
+SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}"
 DBUS_FILE="/etc/dbus-1/system.d/com.yyl.hpcontrolcenter.conf"
+
 DKMS_NAME="hp-omen-rgb"
 DKMS_VER="1.0"
 
-# --- 1. DETECT DISTRO & INSTALL DEPENDENCIES ---
-echo -e "${GREEN}[1/6] Detecting distribution and installing dependencies...${NC}"
+# Renk Kodları
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
 
-if [ -f /etc/os-release ]; then
-    . /etc/os-release
-    DISTRO=$ID
-else
-    echo -e "${RED}[ERROR] Cannot detect distribution.${NC}"
-    exit 1
-fi
+# --- YARDIMCI FONKSİYONLAR ---
 
-case "$DISTRO" in
-    ubuntu|debian|linuxmint|pop|zorin|kali)
-        echo -e "${YELLOW} -> Detected Debian/Ubuntu based system.${NC}"
-        apt-get update
-        apt-get install -y python3-gi python3-pydbus libgtk-4-dev libadwaita-1-dev \
-            build-essential linux-headers-$(uname -r) python3-pip dkms git
-        ;;
-    fedora)
-        echo -e "${YELLOW} -> Detected Fedora.${NC}"
-        dnf install -y python3-gobject gtk4-devel libadwaita-devel \
-            kernel-devel-$(uname -r) python3-pip dkms git gcc make
-        ;;
-    arch|manjaro)
-        echo -e "${YELLOW} -> Detected Arch Linux based system.${NC}"
-        pacman -Sy --noconfirm python-gobject gtk4 libadwaita \
-            linux-headers python-pip dkms git base-devel
-        ;;
-    *)
-        echo -e "${RED}[ERROR] Unsupported distribution: $DISTRO${NC}"
-        echo "Please install dependencies manually: python3-gi, gtk4, libadwaita, dkms, linux-headers"
+log_info() {
+    echo -e "${GREEN}[INFO]${NC} $1"
+}
+
+log_warn() {
+    echo -e "${YELLOW}[WARN]${NC} $1"
+}
+
+log_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
+check_root() {
+    if [ "$EUID" -ne 0 ]; then
+        log_error "Lütfen bu scripti root yetkisiyle çalıştırın: sudo ./install.sh"
         exit 1
-        ;;
-esac
+    fi
+}
 
-# EnvyControl Installation
-if ! command -v envycontrol &> /dev/null; then
-    echo -e "${YELLOW} -> Installing EnvyControl from GitHub (bayasdev)...${NC}"
-    # --break-system-packages is mostly for Debian/Ubuntu/Fedora recent versions
-    pip3 install git+https://github.com/bayasdev/envycontrol.git --break-system-packages 2>/dev/null || \
-    pip3 install git+https://github.com/bayasdev/envycontrol.git
-else
-    echo -e "${GREEN} -> EnvyControl is already installed.${NC}"
-fi
+print_banner() {
+    echo -e "${BLUE}"
+    echo "#################################################"
+    echo "#      HP OMEN CONTROL CENTER - INSTALLER       #"
+    echo "#          v3.2 Universal | Clean Code          #"
+    echo "#################################################"
+    echo -e "${NC}"
+}
 
-# --- 2. AUTOMATIC DRIVER SETUP (DKMS) ---
-echo -e "${GREEN}[2/6] Configuring DKMS for automatic kernel updates...${NC}"
+# --- 1. DAĞITIM TESPİTİ VE BAĞIMLILIKLAR ---
 
-# Clean old
-dkms remove -m $DKMS_NAME -v $DKMS_VER --all &>/dev/null
-rm -rf "/usr/src/$DKMS_NAME-$DKMS_VER"
-mkdir -p "/usr/src/$DKMS_NAME-$DKMS_VER"
+install_dependencies() {
+    log_info "Dağıtım tespit ediliyor ve paketler yükleniyor..."
 
-if [ -f "driver/src/hp-omen-rgb.c" ]; then
-    cp driver/src/hp-omen-rgb.c "/usr/src/$DKMS_NAME-$DKMS_VER/"
-else
-    echo -e "${RED}[ERROR] Driver source not found at driver/src/hp-omen-rgb.c${NC}"
-    exit 1
-fi
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+    else
+        log_error "Dağıtım bilgisi (/etc/os-release) okunamadı."
+        exit 1
+    fi
 
-cat > "/usr/src/$DKMS_NAME-$DKMS_VER/dkms.conf" <<EOF
+    # Fedora / Nobara / Bazzite Ailesi
+    if [[ "$ID" == "fedora" || "$ID" == "nobara" || "$ID" == "bazzite" || "$ID_LIKE" == *"fedora"* ]]; then
+        log_info "Sistem: Fedora/Nobara ($ID)"
+        
+        if [[ "$ID" == "bazzite" ]]; then
+            log_warn "Bazzite (Immutable) tespit edildi. Sistem dosyalarına yazma işlemi başarısız olabilir."
+        fi
+
+        dnf install -y \
+            python3-gobject \
+            python3-pydbus \
+            gtk4-devel \
+            libadwaita-devel \
+            kernel-devel-$(uname -r) \
+            python3-pip \
+            dkms \
+            git \
+            gcc \
+            make
+
+    # Debian / Ubuntu / Mint / Pop!_OS Ailesi
+    elif [[ "$ID" == "ubuntu" || "$ID" == "debian" || "$ID_LIKE" == *"debian"* ]]; then
+        log_info "Sistem: Debian/Ubuntu ($ID)"
+        
+        apt-get update
+        apt-get install -y \
+            python3-gi \
+            python3-pydbus \
+            libgtk-4-dev \
+            libadwaita-1-dev \
+            build-essential \
+            linux-headers-$(uname -r) \
+            python3-pip \
+            dkms \
+            git
+
+    # Arch / Manjaro / CachyOS Ailesi
+    elif [[ "$ID" == "arch" || "$ID" == "manjaro" || "$ID" == "cachyos" || "$ID_LIKE" == *"arch"* ]]; then
+        log_info "Sistem: Arch/CachyOS ($ID)"
+        
+        pacman -Sy --noconfirm \
+            python-gobject \
+            gtk4 \
+            libadwaita \
+            linux-headers \
+            python-pip \
+            dkms \
+            git \
+            base-devel
+        
+        # Arch repolarında pydbus bazen eksik olabiliyor, pip ile garantiye alalım
+        log_info "Python pydbus kontrol ediliyor..."
+        pip3 install pydbus --break-system-packages 2>/dev/null || pip3 install pydbus
+
+    else
+        log_error "Desteklenmeyen dağıtım: $ID"
+        log_warn "Manuel kurulum gereklidir."
+        exit 1
+    fi
+}
+
+install_envycontrol() {
+    if ! command -v envycontrol &> /dev/null; then
+        log_info "EnvyControl (bayasdev) yükleniyor..."
+        # Modern pip versiyonları için --break-system-packages gerekebilir
+        pip3 install git+https://github.com/bayasdev/envycontrol.git --break-system-packages 2>/dev/null || \
+        pip3 install git+https://github.com/bayasdev/envycontrol.git
+    else
+        log_info "EnvyControl zaten yüklü."
+    fi
+}
+
+# --- 2. DKMS SÜRÜCÜ KURULUMU ---
+
+setup_dkms() {
+    log_info "DKMS Sürücüsü yapılandırılıyor..."
+
+    # Eski sürümü temizle
+    dkms remove -m $DKMS_NAME -v $DKMS_VER --all &>/dev/null || true
+    rm -rf "/usr/src/$DKMS_NAME-$DKMS_VER"
+    mkdir -p "/usr/src/$DKMS_NAME-$DKMS_VER"
+
+    # Kaynak kodu kopyala
+    if [ -f "driver/src/hp-omen-rgb.c" ]; then
+        cp driver/src/hp-omen-rgb.c "/usr/src/$DKMS_NAME-$DKMS_VER/"
+    else
+        log_error "Sürücü dosyası bulunamadı: driver/src/hp-omen-rgb.c"
+        exit 1
+    fi
+
+    # dkms.conf oluştur
+    cat > "/usr/src/$DKMS_NAME-$DKMS_VER/dkms.conf" <<EOF
 PACKAGE_NAME="$DKMS_NAME"
 PACKAGE_VERSION="$DKMS_VER"
 BUILT_MODULE_NAME[0]="$DKMS_NAME"
@@ -97,7 +166,8 @@ DEST_MODULE_LOCATION[0]="/extra"
 AUTOINSTALL="yes"
 EOF
 
-cat > "/usr/src/$DKMS_NAME-$DKMS_VER/Makefile" <<EOF
+    # Makefile oluştur
+    cat > "/usr/src/$DKMS_NAME-$DKMS_VER/Makefile" <<EOF
 obj-m += hp-omen-rgb.o
 all:
 	make -C /lib/modules/\$(shell uname -r)/build M=\$(PWD) modules
@@ -105,76 +175,106 @@ clean:
 	make -C /lib/modules/\$(shell uname -r)/build M=\$(PWD) clean
 EOF
 
-echo -e " -> Building module with DKMS..."
-dkms add -m $DKMS_NAME -v $DKMS_VER
-dkms build -m $DKMS_NAME -v $DKMS_VER
-dkms install -m $DKMS_NAME -v $DKMS_VER
-
-if [ $? -eq 0 ]; then
-    echo -e "${GREEN} -> Driver registered successfully.${NC}"
-    modprobe $DKMS_NAME
-    if ! grep -q "$DKMS_NAME" /etc/modules; then echo "$DKMS_NAME" >> /etc/modules; fi
-    # Arch Linux modules load file location fix
-    if [ -d "/etc/modules-load.d" ]; then
-        echo "$DKMS_NAME" > /etc/modules-load.d/hp-omen-rgb.conf
+    # DKMS Build & Install
+    log_info "Modül derleniyor (DKMS)..."
+    dkms add -m $DKMS_NAME -v $DKMS_VER
+    dkms build -m $DKMS_NAME -v $DKMS_VER
+    
+    if dkms install -m $DKMS_NAME -v $DKMS_VER; then
+        log_info "Sürücü başarıyla kuruldu."
+        modprobe $DKMS_NAME
+        
+        # Modülün açılışta yüklenmesi için ayar
+        if ! grep -q "$DKMS_NAME" /etc/modules; then
+            echo "$DKMS_NAME" >> /etc/modules
+        fi
+        
+        # Arch/Systemd tabanlı sistemler için modules-load.d
+        if [ -d "/etc/modules-load.d" ]; then
+            echo "$DKMS_NAME" > /etc/modules-load.d/hp-omen-rgb.conf
+        fi
+    else
+        log_error "DKMS kurulumu başarısız oldu. Kernel header paketlerini kontrol edin."
+        # Scripti durdurmuyoruz, belki kullanıcı manuel halleder
     fi
-else
-    echo -e "${RED}[ERROR] DKMS build failed! Check kernel headers.${NC}"
-    exit 1
-fi
+}
 
-# --- 3. FILES SETUP ---
-echo -e "${GREEN}[3/6] Copying application files...${NC}"
-mkdir -p "$APP_DIR"
-rm -rf "$APP_DIR/src" "$APP_DIR/images"
-cp -r src "$APP_DIR/"
-cp -r images "$APP_DIR/"
-chmod +x "$APP_DIR/src/daemon/omen_service.py"
-chmod +x "$APP_DIR/src/gui/main_window.py"
+# --- 3. DOSYA KOPYALAMA ---
 
-# --- 4. D-BUS & SERVICE CONFIG ---
-echo -e "${GREEN}[4/6] Configuring D-Bus and Systemd service...${NC}"
+setup_files() {
+    log_info "Uygulama dosyaları kopyalanıyor..."
+    
+    mkdir -p "$APP_DIR"
+    
+    # Temiz kurulum için eskileri sil
+    rm -rf "$APP_DIR/src" "$APP_DIR/images"
+    
+    cp -r src "$APP_DIR/"
+    cp -r images "$APP_DIR/"
+    
+    # Çalıştırma izinleri
+    chmod +x "$APP_DIR/src/daemon/omen_service.py"
+    chmod +x "$APP_DIR/src/gui/main_window.py"
+}
 
-cat > $DBUS_FILE <<EOF
+# --- 4. SERVİS VE DBUS AYARLARI ---
+
+setup_service() {
+    log_info "Systemd ve D-Bus yapılandırılıyor..."
+
+    # D-Bus Politikası
+    cat > $DBUS_FILE <<EOF
 <!DOCTYPE busconfig PUBLIC "-//freedesktop//DTD D-BUS Bus Configuration 1.0//EN" "http://www.freedesktop.org/standards/dbus/1.0/busconfig.dtd">
 <busconfig>
   <policy user="root">
-    <allow own="com.yyl.hpcontrolcenter"/><allow send_destination="com.yyl.hpcontrolcenter"/>
+    <allow own="com.yyl.hpcontrolcenter"/>
+    <allow send_destination="com.yyl.hpcontrolcenter"/>
   </policy>
   <policy context="default">
-    <allow send_destination="com.yyl.hpcontrolcenter"/><allow receive_sender="com.yyl.hpcontrolcenter"/><allow send_interface="com.yyl.hpcontrolcenter"/>
+    <allow send_destination="com.yyl.hpcontrolcenter"/>
+    <allow receive_sender="com.yyl.hpcontrolcenter"/>
+    <allow send_interface="com.yyl.hpcontrolcenter"/>
   </policy>
 </busconfig>
 EOF
 
-cat > $SERVICE_FILE <<EOF
+    # Systemd Servis Dosyası
+    cat > $SERVICE_FILE <<EOF
 [Unit]
 Description=HP Omen Control Daemon
 After=multi-user.target
+
 [Service]
 Type=simple
 ExecStart=/usr/bin/python3 $APP_DIR/src/daemon/omen_service.py
 Restart=always
 User=root
 Environment=PYTHONUNBUFFERED=1
+
 [Install]
 WantedBy=multi-user.target
 EOF
 
-systemctl daemon-reload
-systemctl enable com.yyl.hpcontrolcenter.service
-systemctl restart com.yyl.hpcontrolcenter.service
+    # Servisi aktif et
+    systemctl daemon-reload
+    systemctl enable $SERVICE_NAME
+    systemctl restart $SERVICE_NAME
+}
 
-# --- 5. UI INTEGRATION ---
-echo -e "${GREEN}[5/6] Creating desktop shortcuts...${NC}"
+# --- 5. MASAÜSTÜ KISAYOLLARI ---
 
-cat > $BIN_LINK <<EOF
+setup_desktop_entry() {
+    log_info "Masaüstü kısayolları oluşturuluyor..."
+
+    # /usr/local/bin wrapper
+    cat > $BIN_LINK <<EOF
 #!/bin/bash
 /usr/bin/python3 $APP_DIR/src/gui/main_window.py "\$@"
 EOF
-chmod +x $BIN_LINK
+    chmod +x $BIN_LINK
 
-cat > $DESKTOP_FILE <<EOF
+    # .desktop dosyası
+    cat > $DESKTOP_FILE <<EOF
 [Desktop Entry]
 Name=HP Omen Control
 Comment=Control RGB and GPU for HP Omen/Victus
@@ -186,12 +286,28 @@ Categories=Utility;Settings;System;
 StartupNotify=true
 EOF
 
-gtk-update-icon-cache /usr/share/icons/hicolor 2>/dev/null || true
+    # İkon önbelleğini güncelle
+    gtk-update-icon-cache /usr/share/icons/hicolor 2>/dev/null || true
+}
 
-# --- 6. FINISH ---
-echo -e "${GREEN}--------------------------------------------------${NC}"
-echo -e "${YELLOW}  INSTALLATION COMPLETED! v3.0 Final${NC}"
-echo -e "${GREEN}--------------------------------------------------${NC}"
-echo -e "Supported: Debian/Ubuntu, Fedora, Arch/Manjaro"
-echo -e "You can now open 'HP Omen Control' from your menu."
-echo -e ""
+# --- MAIN LOOP ---
+
+main() {
+    check_root
+    print_banner
+    
+    install_dependencies
+    install_envycontrol
+    setup_dkms
+    setup_files
+    setup_service
+    setup_desktop_entry
+    
+    echo -e "${GREEN}--------------------------------------------------${NC}"
+    echo -e "${YELLOW}  KURULUM TAMAMLANDI!${NC}"
+    echo -e "  Komut: omen-control"
+    echo -e "${GREEN}--------------------------------------------------${NC}"
+}
+
+# Scripti Başlat
+main
