@@ -91,9 +91,9 @@ The installer uses DKMS, so the RGB driver will automatically rebuild when you u
 ## 🐧 Compatibility
 | Distribution         | Status     | Notes                     |
 | -------------------- | ---------- | ------------------------- |
-| Ubuntu 22.04 / 24.04 | ✅ Verified | Full support via `apt`    |
-| Fedora 38+           | ✅ Verified | Full support via `dnf`    |
-| Arch Linux / Manjaro | ✅ Verified | Full support via `pacman` |
+| Ubuntu 24.04 LTS     | ✅ Verified | Full support via `apt`    |
+| Fedora 43+           | ✅ Verified | Full support via `dnf`    |
+| Arch Linux / CachyOS | ✅ Verified | Full support via `pacman` |
 | Zorin OS / Pop!_OS   | ✅ Verified | Native support            |
 
 
