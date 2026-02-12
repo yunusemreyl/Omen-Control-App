@@ -1,4 +1,4 @@
-__pycache__/
+# --- Driver Build Artıkları ---
 *.ko
 *.o
 *.mod*
@@ -7,3 +7,26 @@ __pycache__/
 .Makefile.*
 Makefile
 driver/src/Makefile
+dkms.conf
+
+# --- Python & Venv ---
+__pycache__/
+*.pyc
+venv/
+env/
+.env
+
+# --- Build & Dağıtım ---
+build/
+dist/
+*.egg-info/
+
+# --- Kurulum / Local Dosyalar ---
+uninstall.sh
+/usr/share/hp-omen-control/
+/usr/local/bin/omen-control
+/usr/local/bin/omen-uninstall
+
+# --- OS Artıkları ---
+.DS_Store
+Thumbs.db
